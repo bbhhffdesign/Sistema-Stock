@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { db, auth } from "./firebaseConfig";
 import { collection, getDocs } from "firebase/firestore";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 
 import Auth from "./components/Auth";
 import Distribuidores from "./components/Distribuidores";
@@ -28,9 +28,7 @@ function App() {
   // Cargar datos desde Firestore al iniciar sesión
   const fetchData = async (userId) => {
     try {
-      const querySnapshot = await getDocs(
-        collection(db, `stocks/${userId}/test`)
-      );
+      const querySnapshot = await getDocs(collection(db, `stocks/${userId}/test`));
       querySnapshot.forEach((doc) => {
         console.log(doc.id, " => ", doc.data());
       });
@@ -42,7 +40,8 @@ function App() {
   return (
     <div>
       <h1>Control de Stock</h1>
-      <Auth />
+      <Auth usuario={usuario} />
+
       {usuario ? (
         <>
           <Distribuidores />

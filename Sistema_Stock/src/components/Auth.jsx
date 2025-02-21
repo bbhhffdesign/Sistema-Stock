@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { auth, db } from "../firebaseConfig";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 
-function Auth() {
+function Auth({ usuario }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -42,11 +42,19 @@ function Auth() {
   return (
     <div>
       <h2>Autenticación</h2>
-      <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-      <input type="password" placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} />
-      <button onClick={registrar}>Registrar</button>
-      <button onClick={login}>Iniciar Sesión</button>
-      <button onClick={logout}>Cerrar Sesión</button>
+
+      {usuario ? (
+        // Si hay usuario, solo mostramos el botón de cerrar sesión
+        <button onClick={logout}>Cerrar Sesión</button>
+      ) : (
+        // Si NO hay usuario, mostramos los campos y botones de login/registro
+        <>
+          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input type="password" placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <button onClick={registrar}>Registrar</button>
+          <button onClick={login}>Iniciar Sesión</button>
+        </>
+      )}
     </div>
   );
 }
