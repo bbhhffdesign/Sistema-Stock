@@ -10,22 +10,22 @@ import FaltantesStock from "./components/FaltantesStock";
 
 function App() {
   const [usuario, setUsuario] = useState(null);
+  const [componenteActivo, setComponenteActivo] = useState(null); // Estado para controlar qué componente se muestra
 
   useEffect(() => {
-    // Detectar cambios en la autenticación
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        setUsuario(user); // Guardar usuario al iniciar sesión
-        await fetchData(user.uid); // Cargar datos de Firebase
+        setUsuario(user);
+        await fetchData(user.uid);
       } else {
-        setUsuario(null); // Borrar usuario al cerrar sesión
+        setUsuario(null);
+        setComponenteActivo(null); // Ocultar componentes al cerrar sesión
       }
     });
 
-    return () => unsubscribe(); // Limpiar listener cuando se desmonte el componente
+    return () => unsubscribe();
   }, []);
 
-  // Cargar datos desde Firestore al iniciar sesión
   const fetchData = async (userId) => {
     try {
       const querySnapshot = await getDocs(collection(db, `stocks/${userId}/test`));
@@ -44,11 +44,25 @@ function App() {
 
       {usuario ? (
         <>
-          <Distribuidores />
+          {/* Botones para seleccionar qué componente mostrar */}
+          <div>
+            <button onClick={() => setComponenteActivo(componenteActivo === "distribuidores" ? null : "distribuidores")}>
+              Distribuidores
+            </button>
+            <button onClick={() => setComponenteActivo(componenteActivo === "productos" ? null : "productos")}>
+              Lista de Productos
+            </button>
+            <button onClick={() => setComponenteActivo(componenteActivo === "faltantes" ? null : "faltantes")}>
+              Faltantes de Stock
+            </button>
+          </div>
+
           <hr />
-          <ListaProductos />
-          <hr />
-          <FaltantesStock />
+
+          {/* Renderizado condicional según qué botón se presionó */}
+          {componenteActivo === "distribuidores" && <Distribuidores />}
+          {componenteActivo === "productos" && <ListaProductos />}
+          {componenteActivo === "faltantes" && <FaltantesStock />}
         </>
       ) : (
         <p>Inicia sesión para ver tu stock.</p>
