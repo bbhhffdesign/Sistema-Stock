@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { db, auth } from "../firebaseConfig";
-import { collection, addDoc, updateDoc, deleteDoc, doc, query, onSnapshot } from "firebase/firestore";
+import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import Productos from "./Productos";
 
@@ -63,7 +63,6 @@ function Distribuidores() {
       const distribuidorRef = doc(db, `stocks/${usuario.uid}/distribuidores`, id);
       await updateDoc(distribuidorRef, { color: nuevoColor });
 
-      // Actualizar estado localmente
       setDistribuidores((prevDistribuidores) =>
         prevDistribuidores.map((dist) =>
           dist.id === id ? { ...dist, color: nuevoColor } : dist
@@ -75,14 +74,24 @@ function Distribuidores() {
   };
 
   const eliminarDistribuidor = async (id) => {
-    const confirmar = window.confirm("¿Seguro que quieres eliminar este distribuidor?");
+    const confirmar = window.confirm("¿Seguro que quieres eliminar este distribuidor y todos sus productos?");
     if (!confirmar) return;
 
     try {
+      // Eliminar productos asociados al distribuidor
+      const productosRef = collection(db, `stocks/${usuario.uid}/productos`);
+      const productosQuery = query(productosRef, where("distribuidorId", "==", id));
+      const productosSnapshot = await getDocs(productosQuery);
+      const deletePromises = productosSnapshot.docs.map((doc) => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+
+      // Eliminar el distribuidor después de eliminar los productos
       const distribuidorRef = doc(db, `stocks/${usuario.uid}/distribuidores`, id);
       await deleteDoc(distribuidorRef);
+
+      console.log("Distribuidor y productos eliminados correctamente");
     } catch (error) {
-      console.error("Error eliminando distribuidor:", error);
+      console.error("Error eliminando distribuidor y productos:", error);
     }
   };
 
@@ -98,15 +107,12 @@ function Distribuidores() {
         {distribuidores.map((dist) => (
           <li key={dist.id} style={{ backgroundColor: dist.color, padding: "10px", margin: "5px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>{dist.nombre}</span>
-
-            {/* Input para cambiar color */}
-
             <div>
-            <input
-              type="color"
-              value={dist.color}
-              onChange={(e) => actualizarColor(dist.id, e.target.value)}
-            />
+              <input
+                type="color"
+                value={dist.color}
+                onChange={(e) => actualizarColor(dist.id, e.target.value)}
+              />
               <button onClick={() => {
                 const nuevoNombre = prompt("Nuevo nombre:", dist.nombre);
                 if (nuevoNombre !== null) editarDistribuidor(dist.id, nuevoNombre);
