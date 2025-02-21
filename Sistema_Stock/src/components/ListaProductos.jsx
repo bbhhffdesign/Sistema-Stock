@@ -23,7 +23,7 @@ function ListaProductos() {
     return () => unsubscribeAuth();
   }, []);
 
-  // 🔹 Escuchar cambios en la colección de distribuidores en tiempo real
+
   const escucharDistribuidores = (userId) => {
     const q = query(collection(db, `stocks/${userId}/distribuidores`));
     return onSnapshot(q, (querySnapshot) => {
@@ -32,7 +32,7 @@ function ListaProductos() {
     });
   };
 
-  // 🔹 Escuchar cambios en la colección de productos en tiempo real
+
   const escucharProductos = (userId) => {
     const q = query(collection(db, `stocks/${userId}/productos`));
     return onSnapshot(q, (querySnapshot) => {
@@ -41,7 +41,6 @@ function ListaProductos() {
     });
   };
 
-  // Modificar cantidad actual
   const modificarCantidad = async (id, nuevaCantidad) => {
     if (nuevaCantidad < 0 || !Number.isInteger(nuevaCantidad)) return;
     try {

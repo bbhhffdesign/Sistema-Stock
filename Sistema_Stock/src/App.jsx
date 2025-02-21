@@ -10,7 +10,7 @@ import FaltantesStock from "./components/FaltantesStock";
 
 function App() {
   const [usuario, setUsuario] = useState(null);
-  const [componenteActivo, setComponenteActivo] = useState(null); // Estado para controlar qué componente se muestra
+  const [componenteActivo, setComponenteActivo] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -19,7 +19,7 @@ function App() {
         await fetchData(user.uid);
       } else {
         setUsuario(null);
-        setComponenteActivo(null); // Ocultar componentes al cerrar sesión
+        setComponenteActivo(null); //Oculto el componete si no hay usuario activo 
       }
     });
 
@@ -44,7 +44,6 @@ function App() {
 
       {usuario ? (
         <>
-          {/* Botones para seleccionar qué componente mostrar */}
           <div>
             <button onClick={() => setComponenteActivo(componenteActivo === "distribuidores" ? null : "distribuidores")}>
               Distribuidores
@@ -58,8 +57,6 @@ function App() {
           </div>
 
           <hr />
-
-          {/* Renderizado condicional según qué botón se presionó */}
           {componenteActivo === "distribuidores" && <Distribuidores />}
           {componenteActivo === "productos" && <ListaProductos />}
           {componenteActivo === "faltantes" && <FaltantesStock />}

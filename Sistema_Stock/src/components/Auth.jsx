@@ -44,10 +44,8 @@ function Auth({ usuario }) {
       <h2>Autenticación</h2>
 
       {usuario ? (
-        // Si hay usuario, solo mostramos el botón de cerrar sesión
         <button onClick={logout}>Cerrar Sesión</button>
       ) : (
-        // Si NO hay usuario, mostramos los campos y botones de login/registro
         <>
           <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
           <input type="password" placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} />
