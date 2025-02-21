@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { db, auth } from "../firebaseConfig";
-import { collection, query, onSnapshot, getDocs } from "firebase/firestore";
+import { collection, query, onSnapshot } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
 function FaltantesStock() {
@@ -10,52 +10,39 @@ function FaltantesStock() {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setUsuario(user);
-      if (user) {
-        obtenerProductosFaltantes(user.uid); // Traer productos faltantes si el usuario está logueado
-      } else {
-        setProductosFaltantes([]); // Limpiar productos faltantes si el usuario no está logueado
-      }
     });
 
-    return () => unsubscribeAuth(); // Limpiar la suscripción al cambiar el estado del usuario
+    return () => unsubscribeAuth();
   }, []);
 
-  // Función para obtener los productos faltantes
-  const obtenerProductosFaltantes = async (userId) => {
-    const distribuidorRef = collection(db, `stocks/${userId}/distribuidores`);
-    const q = query(distribuidorRef);
+  useEffect(() => {
+    if (usuario) {
+      obtenerProductosFaltantes(usuario.uid);
+    } else {
+      setProductosFaltantes([]); // Si no hay usuario, limpiar los productos faltantes
+    }
+  }, [usuario]); // Se ejecuta cuando cambia el usuario
 
-    // Escuchar en tiempo real los cambios en los distribuidores
-    onSnapshot(q, async (querySnapshot) => {
+  const obtenerProductosFaltantes = (userId) => {
+    const productosRef = collection(db, `stocks/${userId}/productos`);
+    const q = query(productosRef);
+
+    return onSnapshot(q, (querySnapshot) => {
       const productosFaltantesTemp = [];
 
-      // Iterar sobre los distribuidores
-      for (const distDoc of querySnapshot.docs) {
-        const distribuidor = distDoc.data();
-        const productosRef = collection(db, `stocks/${userId}/distribuidores/${distDoc.id}/productos`);
-        
-        // Obtener todos los productos del distribuidor
-        const productosSnapshot = await getDocs(productosRef);
+      querySnapshot.forEach((productoDoc) => {
+        const producto = productoDoc.data();
 
-        // Filtrar productos faltantes
-        productosSnapshot.forEach((productoDoc) => {
-          const producto = productoDoc.data();
-          
-          // Asegurémonos de que los campos cantidadActual y cantidadDeseada existen
-          if (producto.cantidadActual !== undefined && producto.cantidadDeseada !== undefined) {
-            if (producto.cantidadActual < producto.cantidadDeseada) {
-              const faltante = producto.cantidadDeseada - producto.cantidadActual;
-              productosFaltantesTemp.push({
-                nombre: producto.nombre,
-                faltante: faltante,
-                color: distribuidor.color, // Asignamos el color del distribuidor
-              });
-            }
+        if (producto.cantidadActual !== undefined && producto.cantidadDeseada !== undefined) {
+          if (producto.cantidadActual < producto.cantidadDeseada) {
+            productosFaltantesTemp.push({
+              nombre: producto.nombre,
+              faltante: producto.cantidadDeseada - producto.cantidadActual,
+            });
           }
-        });
-      }
+        }
+      });
 
-      // Actualizamos el estado con los productos faltantes
       setProductosFaltantes(productosFaltantesTemp);
     });
   };
@@ -77,7 +64,7 @@ function FaltantesStock() {
             </tr>
           ) : (
             productosFaltantes.map((producto, index) => (
-              <tr key={index} style={{ backgroundColor: producto.color }}>
+              <tr key={index}>
                 <td>{producto.nombre}</td>
                 <td>{producto.faltante}</td>
               </tr>
