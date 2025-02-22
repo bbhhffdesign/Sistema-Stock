@@ -40,19 +40,32 @@ function Auth({ usuario }) {
   };
 
   return (
-    <div>
-      <h2>Autenticación</h2>
+    <div className="auth">
+      {!usuario ?  (<h1>Control de Stock</h1>) : null}
+     
 
       {usuario ? (
         <button onClick={logout}>Cerrar Sesión</button>
       ) : (
-        <>
-          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <input type="password" placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <button onClick={registrar}>Registrar</button>
-          <button onClick={login}>Iniciar Sesión</button>
-        </>
+        <div className="auth__form">
+          {!usuario ?  ( <h2>Autenticación</h2>) : null}
+          <div className="auth__inputs">
+            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input type="password" placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} />
+            {!usuario ? (<p>Inicia sesión para ver tu stock.</p>) : null}
+          </div>
+          <hr />
+          <div className="auth__buttons">
+          <button onClick={login}><span>Iniciar Sesión</span></button>
+          <button onClick={registrar}><span>Registrarse</span></button>
+          </div>
+          <div>
+       
+          </div>
+        </div> 
       )}
+      <div><p>acá va el fla del copy y la marca </p></div>
+   
     </div>
   );
 }

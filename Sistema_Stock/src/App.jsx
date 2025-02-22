@@ -38,8 +38,9 @@ function App() {
   };
 
   return (
-    <div>
-      <h1>Control de Stock</h1>
+    <div className="page">
+      
+      
       <Auth usuario={usuario} />
 
       {usuario ? (
@@ -61,9 +62,8 @@ function App() {
           {componenteActivo === "productos" && <ListaProductos />}
           {componenteActivo === "faltantes" && <FaltantesStock />}
         </>
-      ) : (
-        <p>Inicia sesión para ver tu stock.</p>
-      )}
+      ) : null
+      }
     </div>
   );
 }
