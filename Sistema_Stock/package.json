@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "vite build && git checkout production && git rm -r --cached dist && git add dist && git commit -m 'Deploy de la carpeta dist' && git push origin production && git checkout main"
   },
   "dependencies": {
     "firebase": "^11.3.1",
