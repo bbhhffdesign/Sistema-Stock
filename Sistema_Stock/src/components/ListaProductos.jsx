@@ -97,6 +97,20 @@ function ListaProductos() {
     }
   };
 
+  const registrarPedido = (dist) => {
+    const fechaActual = new Date().toLocaleString(); // Fecha actual
+    let mensaje = `${fechaActual}\n${dist.nombre}\n`;
+  
+    // Verificamos los productos con faltantes (cantidad actual < cantidad deseada)
+    productos[dist.id]?.forEach((prod) => {
+      const diferencia = prod.cantidadDeseada - prod.cantidadActual;
+      if (diferencia > 0) { // Solo si la diferencia es mayor a 0
+        mensaje += `${prod.nombre}   ${diferencia}\n`;
+      }
+    });
+  
+    console.log(mensaje);
+  };
   return (
     <div>
       <h2>Lista de Productos</h2>
@@ -104,7 +118,7 @@ function ListaProductos() {
         <div key={dist.id}>
           <h3 style={{ backgroundColor: dist.color, padding: "10px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             {dist.nombre}
-            <button onClick={() => console.log("Registrar pedido de", dist.nombre)}>Registrar Pedido</button>
+            <button onClick={() => registrarPedido(dist)}>Registrar Pedido</button>
           </h3>
 
           <table border="1" width="100%">
