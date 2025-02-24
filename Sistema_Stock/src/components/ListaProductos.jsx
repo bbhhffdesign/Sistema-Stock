@@ -1,22 +1,26 @@
 import { useState, useEffect } from "react";
 import { db, auth } from "../firebaseConfig";
-import { collection, query, onSnapshot, updateDoc, doc, deleteDoc } from "firebase/firestore";
+import { collection, query, onSnapshot, updateDoc, doc, setDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
 function ListaProductos() {
-  const [productos, setProductos] = useState([]);
   const [distribuidores, setDistribuidores] = useState([]);
+  const [productos, setProductos] = useState({});
   const [usuario, setUsuario] = useState(null);
+  const [modoEdicion, setModoEdicion] = useState({}); // Guarda qué productos están en edición
+
+  // Función para transformar el email en un ID válido
+  const transformarEmail = (email) => email.replace(/[@.]/g, "_");
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      setUsuario(user);
       if (user) {
-        escucharDistribuidores(user.uid);
-        escucharProductos(user.uid);
+        const userId = transformarEmail(user.email);
+        setUsuario(user);
+        escucharDistribuidores(userId);
       } else {
         setDistribuidores([]);
-        setProductos([]);
+        setProductos({});
       }
     });
 
@@ -26,47 +30,70 @@ function ListaProductos() {
   const escucharDistribuidores = (userId) => {
     const q = query(collection(db, `stocks/${userId}/distribuidores`));
     return onSnapshot(q, (querySnapshot) => {
-      const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setDistribuidores(data);
+      const distribs = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setDistribuidores(distribs);
+
+      distribs.forEach((dist) => escucharProductos(userId, dist.id));
     });
   };
 
-  const escucharProductos = (userId) => {
-    const q = query(collection(db, `stocks/${userId}/productos`));
+  const escucharProductos = (userId, distribuidorId) => {
+    const q = query(collection(db, `stocks/${userId}/distribuidores/${distribuidorId}/productos`));
     return onSnapshot(q, (querySnapshot) => {
-      const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setProductos(data);
+      setProductos((prevProductos) => ({
+        ...prevProductos,
+        [distribuidorId]: querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+      }));
     });
   };
 
-  const modificarCantidad = async (id, nuevaCantidad) => {
-    if (nuevaCantidad < 0 || !Number.isInteger(nuevaCantidad)) return;
+  const modificarCantidad = async (distribuidorId, productoId, nuevaCantidad) => {
+    if (nuevaCantidad < 0 || !Number.isInteger(nuevaCantidad) || !usuario) return;
+
     try {
-      const productoRef = doc(db, `stocks/${usuario.uid}/productos`, id);
+      const userId = transformarEmail(usuario.email);
+      const productoRef = doc(db, `stocks/${userId}/distribuidores/${distribuidorId}/productos`, productoId);
       await updateDoc(productoRef, { cantidadActual: nuevaCantidad });
     } catch (error) {
       console.error("Error al actualizar cantidad:", error);
     }
   };
 
-  const editarProducto = async (id, nuevoNombre, nuevaCantidadDeseada) => {
-    try {
-      const productoRef = doc(db, `stocks/${usuario.uid}/productos`, id);
-      await updateDoc(productoRef, { nombre: nuevoNombre, cantidadDeseada: nuevaCantidadDeseada });
-    } catch (error) {
-      console.error("Error al editar producto:", error);
-    }
+  const habilitarEdicion = (distribuidorId, producto) => {
+    setModoEdicion((prev) => ({
+      ...prev,
+      [`${distribuidorId}-${producto.id}`]: { ...producto }, // Guarda los valores originales para editar
+    }));
   };
 
-  const eliminarProducto = async (id) => {
-    const confirmar = window.confirm("¿Seguro que quieres eliminar este producto?");
-    if (!confirmar) return;
+  const manejarCambio = (distribuidorId, productoId, campo, valor) => {
+    setModoEdicion((prev) => ({
+      ...prev,
+      [`${distribuidorId}-${productoId}`]: {
+        ...prev[`${distribuidorId}-${productoId}`],
+        [campo]: valor,
+      },
+    }));
+  };
+
+  const guardarEdicion = async (distribuidorId, productoId) => {
+    if (!usuario || !modoEdicion[`${distribuidorId}-${productoId}`]) return;
 
     try {
-      const productoRef = doc(db, `stocks/${usuario.uid}/productos`, id);
-      await deleteDoc(productoRef);
+      const userId = transformarEmail(usuario.email);
+      const productoRef = doc(db, `stocks/${userId}/distribuidores/${distribuidorId}/productos`, productoId);
+      await updateDoc(productoRef, {
+        nombre: modoEdicion[`${distribuidorId}-${productoId}`].nombre,
+        cantidadDeseada: Number(modoEdicion[`${distribuidorId}-${productoId}`].cantidadDeseada),
+      });
+
+      setModoEdicion((prev) => {
+        const nuevoEstado = { ...prev };
+        delete nuevoEstado[`${distribuidorId}-${productoId}`];
+        return nuevoEstado;
+      });
     } catch (error) {
-      console.error("Error eliminando producto:", error);
+      console.error("Error al guardar la edición:", error);
     }
   };
 
@@ -75,88 +102,71 @@ function ListaProductos() {
       <h2>Lista de Productos</h2>
       {distribuidores.map((dist) => (
         <div key={dist.id}>
-          <h3 style={{ backgroundColor: dist.color, padding: "5px", color: "#fff" }}>
+          <h3 style={{ backgroundColor: dist.color, padding: "10px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             {dist.nombre}
+            <button onClick={() => console.log("Registrar pedido de", dist.nombre)}>Registrar Pedido</button>
           </h3>
-          <table border="1" width="100%" className="tabla-productos">
+
+          <table border="1" width="100%">
             <thead>
               <tr>
                 <th>Nombre</th>
-                <th>Cantidad Deseada</th>
-                <th>Cantidad Actual</th>
+                <th>Deseado</th>
+                <th>Actual</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {productos
-                .filter((prod) => prod.distribuidorId === dist.id)
-                .map((prod) => (
-                  <tr key={prod.id} style={{ backgroundColor: dist.color + "20" }}>
-                    <td>
+              {productos[dist.id]?.map((prod) => (
+                <tr key={prod.id} style={{ backgroundColor: dist.color + "20" }}>
+                  <td>
+                    {modoEdicion[`${dist.id}-${prod.id}`] ? (
                       <input
                         type="text"
-                        value={prod.nombre}
-                        disabled={!prod.editando} // Habilitar solo si está editando
-                        onChange={(e) => {
-                          const nuevoNombre = e.target.value;
-                          setProductos((prevProductos) =>
-                            prevProductos.map((p) =>
-                              p.id === prod.id ? { ...p, nombre: nuevoNombre } : p
-                            )
-                          );
-                        }}
+                        value={modoEdicion[`${dist.id}-${prod.id}`].nombre}
+                        onChange={(e) => manejarCambio(dist.id, prod.id, "nombre", e.target.value)}
                       />
-                    </td>
-                    <td>
+                    ) : (
+                      prod.nombre
+                    )}
+                  </td>
+                  <td>
+                    {modoEdicion[`${dist.id}-${prod.id}`] ? (
                       <input
                         type="number"
-                        value={prod.cantidadDeseada}
-                        disabled={!prod.editando} // Habilitar solo si está editando
-                        onChange={(e) => {
-                          const nuevaCantidadDeseada = parseInt(e.target.value);
-                          setProductos((prevProductos) =>
-                            prevProductos.map((p) =>
-                              p.id === prod.id ? { ...p, cantidadDeseada: nuevaCantidadDeseada } : p
-                            )
-                          );
-                        }}
-                      />
-                    </td>
-                    <td>
-                      <button onClick={() => modificarCantidad(prod.id, prod.cantidadActual - 1)}>
-                        -
-                      </button>
-                      <input
-                        type="number"
-                        value={prod.cantidadActual}
-                        onChange={(e) => modificarCantidad(prod.id, parseInt(e.target.value))}
+                        value={modoEdicion[`${dist.id}-${prod.id}`].cantidadDeseada}
+                        onChange={(e) => manejarCambio(dist.id, prod.id, "cantidadDeseada", e.target.value)}
                         min="0"
                       />
-                      <button onClick={() => modificarCantidad(prod.id, prod.cantidadActual + 1)}>
-                        +
-                      </button>
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => {
-                          if (prod.editando) {
-                            // Si estamos editando, guardamos la información
-                            editarProducto(prod.id, prod.nombre, prod.cantidadDeseada);
-                          }
-                          // Cambiar estado de edición
-                          setProductos((prevProductos) =>
-                            prevProductos.map((p) =>
-                              p.id === prod.id ? { ...p, editando: !p.editando } : p
-                            )
-                          );
-                        }}
-                      >
-                        {prod.editando ? "Guardar" : "Editar"}
-                      </button>
-                      <button onClick={() => eliminarProducto(prod.id)}>🗑️</button>
-                    </td>
-                  </tr>
-                ))}
+                    ) : (
+                      prod.cantidadDeseada
+                    )}
+                  </td>
+                  <td>
+                    <button onClick={() => modificarCantidad(dist.id, prod.id, prod.cantidadActual - 1)}>-</button>
+                    <input
+                      type="number"
+                      value={prod.cantidadActual}
+                      onChange={(e) => modificarCantidad(dist.id, prod.id, parseInt(e.target.value))}
+                      min="0"
+                      disabled
+                    />
+                    <button onClick={() => modificarCantidad(dist.id, prod.id, prod.cantidadActual + 1)}>+</button>
+                  </td>
+                  <td>
+                    {modoEdicion[`${dist.id}-${prod.id}`] ? (
+                      <button onClick={() => guardarEdicion(dist.id, prod.id)}>💾 Guardar</button>
+                    ) : (
+                      <button onClick={() => habilitarEdicion(dist.id, prod)}>✏️ Editar</button>
+                    )}
+                    <button onClick={() => console.log("Eliminar", prod.id)}>🗑️</button>
+                  </td>
+                </tr>
+              )) || (
+                <tr>
+                  <td colSpan="4">No hay productos en este distribuidor.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

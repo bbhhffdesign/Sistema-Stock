@@ -34,3 +34,8 @@
 body {
   background-color: #222222;
 }
+input,
+button{
+  color: black;
+  background-color: grey;
+}

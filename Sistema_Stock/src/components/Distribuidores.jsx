@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { db, auth } from "../firebaseConfig";
-import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, onSnapshot } from "firebase/firestore";
+import { collection, setDoc, updateDoc, deleteDoc, doc, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import Productos from "./Productos";
 
@@ -10,11 +10,16 @@ function Distribuidores() {
   const [distribuidores, setDistribuidores] = useState([]);
   const [usuario, setUsuario] = useState(null);
 
+  // Función para transformar el email y el nombre en IDs válidos
+  const transformarEmail = (email) => email.replace(/[@.]/g, "_");
+  const transformarNombre = (nombre) => nombre.trim().toLowerCase().replace(/\s+/g, "_"); // Convierte espacios en "_"
+
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setUsuario(user);
       if (user) {
-        escucharDistribuidores(user.uid);
+        const emailTransformado = transformarEmail(user.email);
+        escucharDistribuidores(emailTransformado);
       } else {
         setDistribuidores([]);
       }
@@ -23,8 +28,8 @@ function Distribuidores() {
     return () => unsubscribeAuth();
   }, []);
 
-  const escucharDistribuidores = (userId) => {
-    const q = query(collection(db, `stocks/${userId}/distribuidores`));
+  const escucharDistribuidores = (email) => {
+    const q = query(collection(db, `stocks/${email}/distribuidores`));
     return onSnapshot(q, (querySnapshot) => {
       const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setDistribuidores(data);
@@ -33,11 +38,17 @@ function Distribuidores() {
 
   const agregarDistribuidor = async () => {
     if (!nombre.trim()) return alert("El nombre no puede estar vacío");
+    if (!usuario) return alert("Usuario no autenticado");
 
     try {
-      await addDoc(collection(db, `stocks/${usuario.uid}/distribuidores`), {
-        nombre,
-        color,
+      const emailTransformado = transformarEmail(usuario.email);
+      const distribuidorId = transformarNombre(nombre); // Usamos el nombre como ID único
+
+      const distribuidorRef = doc(db, `stocks/${emailTransformado}/distribuidores`, distribuidorId);
+      
+      await setDoc(distribuidorRef, { 
+        nombre, 
+        color 
       });
 
       setNombre("");
@@ -48,10 +59,11 @@ function Distribuidores() {
   };
 
   const editarDistribuidor = async (id, nuevoNombre) => {
-    if (!nuevoNombre.trim()) return;
+    if (!nuevoNombre.trim() || !usuario) return;
 
     try {
-      const distribuidorRef = doc(db, `stocks/${usuario.uid}/distribuidores`, id);
+      const emailTransformado = transformarEmail(usuario.email);
+      const distribuidorRef = doc(db, `stocks/${emailTransformado}/distribuidores`, id);
       await updateDoc(distribuidorRef, { nombre: nuevoNombre });
     } catch (error) {
       console.error("Error editando distribuidor:", error);
@@ -59,8 +71,11 @@ function Distribuidores() {
   };
 
   const actualizarColor = async (id, nuevoColor) => {
+    if (!usuario) return;
+
     try {
-      const distribuidorRef = doc(db, `stocks/${usuario.uid}/distribuidores`, id);
+      const emailTransformado = transformarEmail(usuario.email);
+      const distribuidorRef = doc(db, `stocks/${emailTransformado}/distribuidores`, id);
       await updateDoc(distribuidorRef, { color: nuevoColor });
 
       setDistribuidores((prevDistribuidores) =>
@@ -74,19 +89,22 @@ function Distribuidores() {
   };
 
   const eliminarDistribuidor = async (id) => {
+    if (!usuario) return;
     const confirmar = window.confirm("¿Seguro que quieres eliminar este distribuidor y todos sus productos?");
     if (!confirmar) return;
 
     try {
+      const emailTransformado = transformarEmail(usuario.email);
+
       // Eliminar productos asociados al distribuidor
-      const productosRef = collection(db, `stocks/${usuario.uid}/productos`);
+      const productosRef = collection(db, `stocks/${emailTransformado}/productos`);
       const productosQuery = query(productosRef, where("distribuidorId", "==", id));
       const productosSnapshot = await getDocs(productosQuery);
       const deletePromises = productosSnapshot.docs.map((doc) => deleteDoc(doc.ref));
       await Promise.all(deletePromises);
 
       // Eliminar el distribuidor después de eliminar los productos
-      const distribuidorRef = doc(db, `stocks/${usuario.uid}/distribuidores`, id);
+      const distribuidorRef = doc(db, `stocks/${emailTransformado}/distribuidores`, id);
       await deleteDoc(distribuidorRef);
 
       console.log("Distribuidor y productos eliminados correctamente");

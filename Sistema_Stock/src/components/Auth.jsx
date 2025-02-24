@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { auth, db } from "../firebaseConfig";
 import {
   createUserWithEmailAndPassword,
@@ -7,28 +7,31 @@ import {
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 
-
 function Auth({ usuario }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  // Función para transformar el email en un ID válido
+  const transformarEmail = (email) => {
+    return email.replace(/[@.]/g, "_"); // Reemplaza "@" y "." por "_"
+  };
+
   const registrar = async () => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Guardar el email en Firestore usando el UID del usuario
-      await setDoc(doc(db, "usuarios", user.uid), {
+      const emailTransformado = transformarEmail(user.email);
+
+      // Guardar los datos del usuario en la colección "usuarios" con el email como ID
+      await setDoc(doc(db, "usuarios", emailTransformado), {
+        usuarioId: user.uid,
         email: user.email,
       });
 
-      console.log("Usuario registrado:", user);
+      console.log("✅ Usuario registrado:", user.email);
     } catch (error) {
-      console.error("Error registrando usuario:", error.message);
+      console.error("❌ Error registrando usuario:", error.message);
     }
   };
 
@@ -36,7 +39,7 @@ function Auth({ usuario }) {
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
-      console.error("Error iniciando sesión:", error.message);
+      console.error("❌ Error iniciando sesión:", error.message);
     }
   };
 
@@ -44,7 +47,7 @@ function Auth({ usuario }) {
     try {
       await signOut(auth);
     } catch (error) {
-      console.error("Error cerrando sesión:", error.message);
+      console.error("❌ Error cerrando sesión:", error.message);
     }
   };
 
@@ -55,11 +58,10 @@ function Auth({ usuario }) {
       {usuario ? (
         <button onClick={logout}>Cerrar Sesión</button>
       ) : (
-        <div className="auth__form ">
+        <div className="auth__form">
           {!usuario ? <h2 className="text-red-300 text-2xl">Autenticación</h2> : null}
           <div className="auth__inputs">
             <input
-              className=""
               type="email"
               placeholder="Email"
               value={email}
@@ -82,7 +84,6 @@ function Auth({ usuario }) {
               <span>Registrarse</span>
             </button>
           </div>
-          <div></div>
         </div>
       )}
     </div>
