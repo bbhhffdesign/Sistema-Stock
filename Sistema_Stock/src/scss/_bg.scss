@@ -1,0 +1,19 @@
+.background{
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    min-height: 100svh;
+    max-height: 100lvh;
+    width: 100%;
+    background-image: url("/src/assets/img/bg.png");
+    background-size: 50%;
+    background-position: center;
+
+    &::after{
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.159);
+    }
+    
+}

@@ -38,33 +38,33 @@ function App() {
   };
 
   return (
-    <div className="page">
-      
-      
-      <Auth usuario={usuario} />
+<>
+<Auth usuario={usuario} />
 
-      {usuario ? (
-        <>
-          <div>
-            <button onClick={() => setComponenteActivo(componenteActivo === "distribuidores" ? null : "distribuidores")}>
-              Distribuidores
-            </button>
-            <button onClick={() => setComponenteActivo(componenteActivo === "productos" ? null : "productos")}>
-              Lista de Productos
-            </button>
-            <button onClick={() => setComponenteActivo(componenteActivo === "faltantes" ? null : "faltantes")}>
-              Faltantes de Stock
-            </button>
-          </div>
+{usuario ? (
+  <>
+      <div className="">
+        <button className="text-5xl" onClick={() => setComponenteActivo(componenteActivo === "distribuidores" ? null : "distribuidores")}>
+          Distribuidores
+        </button>
+        <button onClick={() => setComponenteActivo(componenteActivo === "productos" ? null : "productos")}>
+          Lista de Productos
+        </button>
+        <button onClick={() => setComponenteActivo(componenteActivo === "faltantes" ? null : "faltantes")}>
+          Faltantes de Stock
+        </button>
+      </div>
+  
+      <hr />
+      {componenteActivo === "distribuidores" && <Distribuidores />}
+      {componenteActivo === "productos" && <ListaProductos />}
+      {componenteActivo === "faltantes" && <FaltantesStock />}
+    </>
+  ) : null
+  }
+</>
+      
 
-          <hr />
-          {componenteActivo === "distribuidores" && <Distribuidores />}
-          {componenteActivo === "productos" && <ListaProductos />}
-          {componenteActivo === "faltantes" && <FaltantesStock />}
-        </>
-      ) : null
-      }
-    </div>
   );
 }
 

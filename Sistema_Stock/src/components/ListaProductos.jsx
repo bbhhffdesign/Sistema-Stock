@@ -78,7 +78,7 @@ function ListaProductos() {
           <h3 style={{ backgroundColor: dist.color, padding: "5px", color: "#fff" }}>
             {dist.nombre}
           </h3>
-          <table border="1" width="100%">
+          <table border="1" width="100%" className="tabla-productos">
             <thead>
               <tr>
                 <th>Nombre</th>
